@@ -1,0 +1,14 @@
+# Arduino build files
+*.hex
+*.elf
+*.bin
+
+# IDE specific files
+*.bak
+*.tmp
+*.swp
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
