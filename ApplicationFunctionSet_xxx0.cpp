@@ -1,108 +1,215 @@
 #include "ApplicationFunctionSet_xxx0.h"
-#include "Arduino.h"
 
-// Keep any other includes you want, e.g. QMI8658C, ArduinoJson, etc.
-// #include "QMI8658C.h"
-// #include "ArduinoJson-v6.11.1.h"
+// Define the IR receiver pin
+#define IR_RECV_PIN 11
 
-// Global driver objects
-DeviceDriverSet_IRrecv  AppIRrecv;
-DeviceDriverSet_Motor   AppMotor;
+#ifndef IR_INACTIVITY_TIMEOUT
+  #define IR_INACTIVITY_TIMEOUT 200  // Try 200ms for snappier stop; adjust as desired.
+#endif
 
-// ---------------------------------------------------------------------------
-// Initialize function
-// ---------------------------------------------------------------------------
+// ---------------------------------------------------------
+// init() - Initialize IR + motor driver
+// ---------------------------------------------------------
 void ApplicationFunctionSet::init()
 {
-  // Initialize serial if needed
-  Serial.begin(9600);
+    Serial.begin(9600);
 
-  // Initialize your IR receiver
-  AppIRrecv.DeviceDriverSet_IRrecv_Init();
+    // IR
+    AppIRrecv.DeviceDriverSet_IRrecv_Init();
+    pinMode(IR_RECV_PIN, INPUT);
 
-  // Initialize your motor driver
-  AppMotor.DeviceDriverSet_Motor_Init();
+    // Motors
+    AppMotor.DeviceDriverSet_Motor_Init();
 
-  // If you want to initialize anything else (voltage sensor, servo, LED, etc.)
-  // you can still do it here if you wish.
+    Serial.println("Robot initialization complete.");
 }
 
-// ---------------------------------------------------------------------------
-// Simplified motor-movement helper
-// ---------------------------------------------------------------------------
+// ---------------------------------------------------------
+// stopCar() - Helper to stop both motors
+// ---------------------------------------------------------
+void ApplicationFunctionSet::stopCar()
+{
+    AppMotor.DeviceDriverSet_Motor_control(
+        direction_void, 0,
+        direction_void, 0,
+        control_enable
+    );
+}
+
+// ---------------------------------------------------------
+// moveCar() - Map codes to movement:
+//    1 => Forward
+//    2 => Backward
+//    3 => Spin Left
+//    4 => Spin Right
+//    anything else => stop
+// ---------------------------------------------------------
 void ApplicationFunctionSet::moveCar(uint8_t direction, uint8_t speed)
 {
-  // For clarity:
-  //   direction_void = stops the motor
-  //   direction_just = forward
-  //   direction_back = reverse
-  // 
-  // We'll interpret IR codes: 
-  //   1 -> FORWARD
-  //   2 -> BACKWARD
-  //   3 -> LEFT
-  //   4 -> RIGHT
-  //   anything else -> STOP
-  switch (direction) {
-    case 1:  // Forward
-      AppMotor.DeviceDriverSet_Motor_control(direction_just, speed,
-                                             direction_just, speed,
-                                             control_enable);
-      break;
+    switch (direction)
+    {
+        case 1: // Forward
+            AppMotor.DeviceDriverSet_Motor_control(
+                direction_just, speed,
+                direction_just, speed,
+                control_enable
+            );
+            break;
 
-    case 2:  // Backward
-      AppMotor.DeviceDriverSet_Motor_control(direction_back, speed,
-                                             direction_back, speed,
-                                             control_enable);
-      break;
+        case 2: // Backward
+            AppMotor.DeviceDriverSet_Motor_control(
+                direction_back, speed,
+                direction_back, speed,
+                control_enable
+            );
+            break;
 
-    case 3:  // Left
-      // One easy way is left wheel reverse, right wheel forward
-      // or you can do left wheel stop, right wheel forward, etc.
-      AppMotor.DeviceDriverSet_Motor_control(direction_back,  speed,
-                                             direction_just,  speed,
-                                             control_enable);
-      break;
+        case 3: // Spin Left
+            AppMotor.DeviceDriverSet_Motor_control(
+                direction_just, speed,
+                direction_back, speed,
+                control_enable
+            );
+            break;
 
-    case 4:  // Right
-      AppMotor.DeviceDriverSet_Motor_control(direction_just,  speed,
-                                             direction_back,  speed,
-                                             control_enable);
-      break;
+        case 4: // Spin Right
+            AppMotor.DeviceDriverSet_Motor_control(
+                direction_back, speed,
+                direction_just, speed,
+                control_enable
+            );
+            break;
 
-    default: // Stop
-      AppMotor.DeviceDriverSet_Motor_control(direction_void, 0,
-                                             direction_void, 0,
-                                             control_enable);
-      break;
-  }
+        default:
+            stopCar();
+            break;
+    }
 }
 
-// ---------------------------------------------------------------------------
-// Main IR-reading loop
-// ---------------------------------------------------------------------------
+// ---------------------------------------------------------
+// doDance() - A fun multi-step routine.
+// ---------------------------------------------------------
+void ApplicationFunctionSet::doDance()
+{
+    Serial.println("Dance routine start...");
+
+    // Spin left 700ms
+    AppMotor.DeviceDriverSet_Motor_control(
+        direction_just, 180,
+        direction_back, 180,
+        control_enable
+    );
+    delay(700);
+
+    // Spin right 700ms
+    AppMotor.DeviceDriverSet_Motor_control(
+        direction_back, 180,
+        direction_just, 180,
+        control_enable
+    );
+    delay(700);
+
+    // Forward 500ms
+    AppMotor.DeviceDriverSet_Motor_control(
+        direction_just, 180,
+        direction_just, 180,
+        control_enable
+    );
+    delay(500);
+
+    // Backward 500ms
+    AppMotor.DeviceDriverSet_Motor_control(
+        direction_back, 180,
+        direction_back, 180,
+        control_enable
+    );
+    delay(500);
+
+    // Spin left 1 second
+    AppMotor.DeviceDriverSet_Motor_control(
+        direction_just, 200,
+        direction_back, 200,
+        control_enable
+    );
+    delay(1000);
+
+    // Spin right 1 second
+    AppMotor.DeviceDriverSet_Motor_control(
+        direction_back, 200,
+        direction_just, 200,
+        control_enable
+    );
+    delay(1000);
+
+    stopCar();
+    Serial.println("Dance complete!");
+}
+
+// ---------------------------------------------------------
+// IRControlLoop()
+//   - Decodes IR codes
+//   - Keeps driving as long as "movement" codes continue
+//   - Stops if no new code arrives within IR_INACTIVITY_TIMEOUT
+//   - Code 5 triggers doDance()
+// ---------------------------------------------------------
 void ApplicationFunctionSet::IRControlLoop()
 {
-  // If there's a valid IR code, read it:
-  uint8_t IRrecv_button;
-  if (AppIRrecv.DeviceDriverSet_IRrecv_Get(&IRrecv_button)) 
-  {
-    // Just map the IR code to movement:
-    switch (IRrecv_button) {
-      case 1: // forward
-      case 2: // backward
-      case 3: // left
-      case 4: // right
-        moveCar(IRrecv_button, 150);
-        break;
-      
-      default:
-        // On any other button, we can stop:
-        moveCar(0, 0);
-        break;
+    uint8_t currentIRCode = 0;
+    static unsigned long lastIRTime = 0;  // Track when we got the last valid IR command
+    static uint8_t lastIRCodeSaved = 0;   // Track the last non-zero IR code
+
+    // Try to get a new IR code
+   bool gotCode = AppIRrecv.DeviceDriverSet_IRrecv_Get(&currentIRCode);
+
+    if (gotCode) {
+      Serial.print("Raw IR code: ");
+      Serial.println(currentIRCode, HEX);  // Print in hex for clarity
+
+      // If the code is a repeat code
+      if (currentIRCode == 0xFF || currentIRCode == 0xFFFFFFFF /* or 0 */) {
+        // Keep using lastIRCodeSaved, but update time so it doesn't time out:
+        Serial.println("Repeat code detected");
+        currentIRCode = lastIRCodeSaved; 
+      } else {
+        // If it's a brand-new code, store it for future 'repeat'
+        lastIRCodeSaved = currentIRCode;
+      }
+
+      // Always update lastIRTime if we got *any* code
+      lastIRTime = millis();
     }
-    // Debug printing, if you like:
-    Serial.print("IR Code: ");
-    Serial.println(IRrecv_button);
-  }
+
+
+    // If we have not received any code in the last X ms, stop
+    if ((millis() - lastIRTime) > IR_INACTIVITY_TIMEOUT)
+    {
+        // No recent IR signals -> Stop the car
+        stopCar();
+        // Also clear the last saved code if you want it to require a new press
+        lastIRCodeSaved = 0;
+        return;
+    }
+
+    // Otherwise, if we do have a valid last code, handle it
+    if (lastIRCodeSaved != 0)
+    {
+        if (lastIRCodeSaved == 5)
+        {
+            // Special case: dance routine
+            doDance();
+            stopCar();
+            // Clear the code so we don't keep dancing
+            lastIRCodeSaved = 0;
+        }
+        else
+        {
+            // Move according to the last known code
+            moveCar(lastIRCodeSaved, 150);
+        }
+    }
+    else
+    {
+        // If there's no valid code at all, just stop
+        stopCar();
+    }
 }

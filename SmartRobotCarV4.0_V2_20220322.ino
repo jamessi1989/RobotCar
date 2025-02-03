@@ -1,27 +1,25 @@
 #include <avr/wdt.h>
 #include "ApplicationFunctionSet_xxx0.h"
 
-// Create our simplified control object
+// Create our control object
 ApplicationFunctionSet Application_FunctionSet;
 
 void setup()
 {
-  // Enable the watchdog at 2 seconds, so if the loop locks,
-  // the chip will reset.
+  // Enable the watchdog timer (2 seconds) in case of a loop hang.
   wdt_enable(WDTO_2S);
-
-  // Initialize everything
+  
+  // Initialize everything (IR, motors, etc.)
   Application_FunctionSet.init();
 }
 
 void loop()
 {
-  // Must periodically reset the watchdog
+  // Reset the watchdog periodically.
   wdt_reset();
 
-  // Continuously read IR and drive motors based on IR input
+  // Continuously check the IR and update motor control.
   Application_FunctionSet.IRControlLoop();
 
-  // You can do other tasks here if you like...
-  // e.g. check a sensor, do some debug prints, etc.
+  // (Other tasks can be added here if needed.)
 }

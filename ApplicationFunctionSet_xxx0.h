@@ -1,30 +1,44 @@
 #ifndef APPLICATIONFUNCTIONSET_XXX0_H
 #define APPLICATIONFUNCTIONSET_XXX0_H
 
+#include "Arduino.h"
 #include "DeviceDriverSet_xxx0.h"
 
 /**
- * Simple class that initializes the motor and IR drivers
- * and provides a function to read IR commands and drive the car.
+ * A simplified class that:
+ *   - Reads IR codes
+ *   - Moves the motors while a button is held
+ *   - Does a "dance" on a separate button press
+ *   - Gives "forward" priority over "backward" if both are held
  */
 class ApplicationFunctionSet
 {
 public:
-    // Initialize all drivers (motors, IR, etc.)
-    void init();
-
-    // Continuously read IR and drive accordingly
-    void IRControlLoop();
+    void init();           // call in setup()
+    void IRControlLoop();  // call in loop()
 
 private:
-    // Helper: sets both motors according to a "direction" code
-    // For simplicity, let's say:
-    //   1 -> FORWARD
-    //   2 -> BACKWARD
-    //   3 -> LEFT
-    //   4 -> RIGHT
-    //   anything else -> STOP
-    void moveCar(uint8_t direction, uint8_t speed = 150);
+    // Move, stop, or dance
+    void moveCar(uint8_t direction, uint8_t speed);
+    void stopCar();
+    void doDance();
+
+    // Inactivity time for IR in ms
+    const unsigned long IR_INACTIVITY_TIMEOUT = 200;
+
+    // Track the last code/time to detect "button release"
+    unsigned long lastIRTime = 0;
+    uint8_t       lastIRCode = 0;
+
+    // For priority logic (if needed)
+    // We'll store the current "active" direction so we can ignore
+    // contradictory commands (e.g. backward while in forward).
+    uint8_t currentActiveDirection = 0; // 1=fwd,2=back,3=left,4=right,0=stop
+
+    // Our hardware drivers
+    DeviceDriverSet_IRrecv  AppIRrecv;
+    DeviceDriverSet_Motor   AppMotor;
 };
 
 #endif
+  
