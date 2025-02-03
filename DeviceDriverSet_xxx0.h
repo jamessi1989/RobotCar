@@ -112,7 +112,8 @@ public:
 #define speed_Max 255
 #define direction_just true
 #define direction_back false
-#define direction_void 3
+#define direction_void 99
+
 
 #define Duration_enable true
 #define Duration_disable false

@@ -93,57 +93,101 @@ void ApplicationFunctionSet::doDance()
 {
     Serial.println("Dance routine start...");
 
-    // Spin left 700ms
+    // --- Quick spin left for 500 ms at full speed
     AppMotor.DeviceDriverSet_Motor_control(
-        direction_just, 180,
-        direction_back, 180,
-        control_enable
-    );
-    delay(700);
-
-    // Spin right 700ms
-    AppMotor.DeviceDriverSet_Motor_control(
-        direction_back, 180,
-        direction_just, 180,
-        control_enable
-    );
-    delay(700);
-
-    // Forward 500ms
-    AppMotor.DeviceDriverSet_Motor_control(
-        direction_just, 180,
-        direction_just, 180,
+        direction_just, 255,
+        direction_back, 255,
         control_enable
     );
     delay(500);
 
-    // Backward 500ms
+    // --- Quick spin right for 500 ms at full speed
     AppMotor.DeviceDriverSet_Motor_control(
-        direction_back, 180,
-        direction_back, 180,
+        direction_back, 255,
+        direction_just, 255,
         control_enable
     );
     delay(500);
 
-    // Spin left 1 second
+    // --- Forward 600 ms at fast speed
     AppMotor.DeviceDriverSet_Motor_control(
         direction_just, 200,
-        direction_back, 200,
-        control_enable
-    );
-    delay(1000);
-
-    // Spin right 1 second
-    AppMotor.DeviceDriverSet_Motor_control(
-        direction_back, 200,
         direction_just, 200,
         control_enable
     );
-    delay(1000);
+    delay(600);
 
+    // --- Wiggle: forward 200 ms, then backward 200 ms (twice)
+    for (int i = 0; i < 2; i++)
+    {
+        // Forward 200 ms
+        AppMotor.DeviceDriverSet_Motor_control(
+            direction_just, 200,
+            direction_just, 200,
+            control_enable
+        );
+        delay(200);
+
+        // Backward 200 ms
+        AppMotor.DeviceDriverSet_Motor_control(
+            direction_back, 200,
+            direction_back, 200,
+            control_enable
+        );
+        delay(200);
+    }
+
+    // --- Slow spin left 800 ms
+    AppMotor.DeviceDriverSet_Motor_control(
+        direction_just, 150,
+        direction_back, 150,
+        control_enable
+    );
+    delay(800);
+
+    // --- Slow spin right 800 ms
+    AppMotor.DeviceDriverSet_Motor_control(
+        direction_back, 150,
+        direction_just, 150,
+        control_enable
+    );
+    delay(800);
+
+    // --- Quick dash forward 300 ms at near max speed
+    AppMotor.DeviceDriverSet_Motor_control(
+        direction_just, 220,
+        direction_just, 220,
+        control_enable
+    );
+    delay(300);
+
+    // --- Quick dash backward 300 ms
+    AppMotor.DeviceDriverSet_Motor_control(
+        direction_back, 220,
+        direction_back, 220,
+        control_enable
+    );
+    delay(300);
+
+    // --- Final double spin: left 400 ms, then right 400 ms
+    AppMotor.DeviceDriverSet_Motor_control(
+        direction_just, 180,
+        direction_back, 180,
+        control_enable
+    );
+    delay(400);
+    AppMotor.DeviceDriverSet_Motor_control(
+        direction_back, 180,
+        direction_just, 180,
+        control_enable
+    );
+    delay(400);
+
+    // Stop
     stopCar();
     Serial.println("Dance complete!");
 }
+
 
 // ---------------------------------------------------------
 // IRControlLoop()
